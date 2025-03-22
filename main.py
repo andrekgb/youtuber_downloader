@@ -35,7 +35,7 @@ def download_video():
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
     ydl_opts = {
-        'outtmpl': f'{save_path}/youtube_video_%(id)s.%(ext)s',
+        'outtmpl': f'{save_path}/%(playlist_title)s/%(title)s.%(ext)s' if playlist_var.get() else f'{save_path}/%(title)s.%(ext)s',
         'format': 'bestaudio/best' if mp3_var.get() else 'bestvideo+bestaudio/best',
         'ffmpeg_location': ffmpeg_path,
         'logger': MyLogger(status_box),
@@ -44,7 +44,8 @@ def download_video():
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
-        }] if mp3_var.get() else []
+        }] if mp3_var.get() else [],
+        'noplaylist': not playlist_var.get()
     }
 
     try:
@@ -68,6 +69,10 @@ url_entry.pack(pady=5)
 mp3_var = tk.BooleanVar()
 mp3_checkbox = tk.Checkbutton(frame, text="Download MP3 only", variable=mp3_var)
 mp3_checkbox.pack(pady=5)
+
+playlist_var = tk.BooleanVar()
+playlist_checkbox = tk.Checkbutton(frame, text="Download Playlist", variable=playlist_var)
+playlist_checkbox.pack(pady=5)
 
 download_button = tk.Button(frame, text="Download", command=download_video)
 download_button.pack(pady=10)
