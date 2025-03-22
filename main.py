@@ -36,10 +36,15 @@ def download_video():
 
     ydl_opts = {
         'outtmpl': f'{save_path}/youtube_video_%(id)s.%(ext)s',
-        'format': 'bestvideo+bestaudio/best',
-        'ffmpeg_location': ffmpeg_path,  # Tell yt-dlp where to find ffmpeg
+        'format': 'bestaudio/best' if mp3_var.get() else 'bestvideo+bestaudio/best',
+        'ffmpeg_location': ffmpeg_path,
         'logger': MyLogger(status_box),
-        'progress_hooks': [lambda d: status_box.insert(tk.END, f"{d['status']}: {d.get('filename', '')}\n") if d['status'] == 'finished' else None]
+        'progress_hooks': [lambda d: status_box.insert(tk.END, f"{d['status']}: {d.get('filename', '')}\n") if d['status'] == 'finished' else None],
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }] if mp3_var.get() else []
     }
 
     try:
@@ -60,10 +65,14 @@ tk.Label(frame, text="Enter YouTube URL:").pack(pady=5)
 url_entry = tk.Entry(frame, width=50)
 url_entry.pack(pady=5)
 
+mp3_var = tk.BooleanVar()
+mp3_checkbox = tk.Checkbutton(frame, text="Download MP3 only", variable=mp3_var)
+mp3_checkbox.pack(pady=5)
+
 download_button = tk.Button(frame, text="Download", command=download_video)
 download_button.pack(pady=10)
 
-status_box = ScrolledText(frame, height=10, bg='black', fg='#00FF00')  # Lighter green color
+status_box = ScrolledText(frame, height=10, bg='black', fg='#00FF00')
 status_box.pack(pady=10, fill=tk.BOTH, expand=True)
 
 root.mainloop()
