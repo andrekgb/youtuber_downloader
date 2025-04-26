@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter.scrolledtext import ScrolledText
 import threading
+from PIL import Image, ImageTk
+import os
 
 class MyLogger:
     def __init__(self, text_widget):
@@ -47,7 +49,7 @@ def download_thread_function(url, save_path):
 
     ydl_opts = {
         'outtmpl': f'{save_path}/%(playlist_title)s/%(title)s.%(ext)s' if playlist_var.get() else f'{save_path}/%(title)s.%(ext)s',
-        'format': 'bestaudio/best' if mp3_var.get() else 'bestvideo+bestaudio/best',
+        'format': 'bestaudio/best' if mp3_var.get() else ('bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best' if davinci_compatible_var.get() else 'bestvideo+bestaudio/best'),
         'ffmpeg_location': ffmpeg_path,
         'logger': MyLogger(status_box),
         'progress_hooks': [lambda d: status_box.insert(tk.END, f"{d['status']}: {d.get('filename', '')}\n") if d['status'] == 'finished' else None],
@@ -55,11 +57,16 @@ def download_thread_function(url, save_path):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
-        }] if mp3_var.get() else [{
-            # For video downloads, ensure audio is in a Davinci Resolve compatible format
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
-        }] if davinci_compatible_var.get() else [],
+        }] if mp3_var.get() else ([{
+            # For video downloads, ensure it's in a Davinci Resolve compatible format
+            'key': 'FFmpegVideoRemuxer',
+            'prefformat': 'mp4',
+        }, {
+            # Ensure proper merging of video and audio
+            'key': 'FFmpegMerger',
+            'prefformat': 'mp4',
+        }] if davinci_compatible_var.get() else []),
+        'merge_output_format': 'mp4' if davinci_compatible_var.get() else None,
         'noplaylist': not playlist_var.get()
     }
 
@@ -94,15 +101,27 @@ def download_thread_function(url, save_path):
         root.after(0, lambda: messagebox.showinfo("Success", success_msg))
     except Exception as e:
         error_msg = f"Error: {e}\n"
+        error_str = str(e)
         root.after(0, lambda: status_box.insert(tk.END, error_msg))
-        root.after(0, lambda: messagebox.showerror("Error", f"Failed to download: {e}"))
+        root.after(0, lambda msg=error_str: messagebox.showerror("Error", f"Failed to download: {msg}"))
     finally:
         # Re-enable the download button
         root.after(0, lambda: download_button.config(state=tk.NORMAL))
 
 # GUI Setup
 root = tk.Tk()
-root.title("YouTube Video Downloader")
+root.title("VE2ZDX YouTube Video Downloader")
+
+# Set application icon
+icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ve2zdx_logo.png")
+if os.path.exists(icon_path):
+    # For Windows and Linux
+    icon_image = Image.open(icon_path)
+    icon_photo = ImageTk.PhotoImage(icon_image)
+    root.iconphoto(True, icon_photo)
+
+    # Keep a reference to prevent garbage collection
+    root.icon_photo = icon_photo
 
 frame = tk.Frame(root, padx=20, pady=20)
 frame.pack(fill=tk.BOTH, expand=True)
