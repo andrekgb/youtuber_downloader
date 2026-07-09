@@ -1,0 +1,72 @@
+name: Build Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yt-dlp pillow imageio-ffmpeg pyinstaller
+
+      - name: Build .app and .dmg
+        run: |
+          pyinstaller ve2zdx_downloader.spec --clean --noconfirm
+
+          # Staging for DMG
+          mkdir -p dist/_dmg_staging
+          cp -R "dist/VE2ZDX Downloader.app" "dist/_dmg_staging/VE2ZDX Downloader.app"
+          ln -s /Applications "dist/_dmg_staging/Applications"
+
+          hdiutil create \
+            -volname "VE2ZDX Downloader" \
+            -srcfolder dist/_dmg_staging \
+            -ov -format UDZO \
+            dist/VE2ZDXDownloader.dmg
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: VE2ZDXDownloader-mac
+          path: dist/VE2ZDXDownloader.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yt-dlp pillow imageio-ffmpeg pyinstaller
+
+      - name: Build .exe
+        run: |
+          pyinstaller ve2zdx_downloader.spec --clean --noconfirm
+
+      - name: Build installer with Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_windows.iss
+        shell: pwsh
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: VE2ZDXDownloader-windows
+          path: dist/VE2ZDXDownloaderSetup.exe
