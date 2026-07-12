@@ -2,8 +2,11 @@
 This project is a simple youtube downloader that uses the yt-dlp library to download videos/audio from youtube.
  - https://github.com/yt-dlp/yt-dlp
 
+Video output is always normalized to `.mp4` via a bundled HandBrakeCLI (some YouTube video+audio combinations can only be merged by yt-dlp/ffmpeg into `.mkv`/`.webm`; HandBrakeCLI re-encodes those to `.mp4`). The same HandBrakeCLI is also used to cut clips for the "Slice video on timestamps" (Ham Radio) feature, producing `.mp4` clips directly instead of copying the source container.
+
 # Dependencies
  - pip install -r requirements.txt
+ - HandBrakeCLI is fetched automatically by `build.py` (see below) into `vendor/handbrake/<mac|win>/` and bundled into the installer. For running `python main.py` directly in development, either run `python build.py` once to populate `vendor/`, or install HandBrakeCLI yourself and make sure it's on your `PATH`.
 
 # Creating Executables
 
