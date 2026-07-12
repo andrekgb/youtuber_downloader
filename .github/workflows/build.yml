@@ -21,6 +21,9 @@ jobs:
         run: |
           pip install yt-dlp pillow imageio-ffmpeg pyinstaller
 
+      - name: Fetch HandBrakeCLI
+        run: python -c "import build; build.ensure_handbrake_cli('mac')"
+
       - name: Build .app and .dmg
         run: |
           pyinstaller ve2zdx_downloader.spec --clean --noconfirm
@@ -55,6 +58,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install yt-dlp pillow imageio-ffmpeg pyinstaller
+
+      - name: Fetch HandBrakeCLI
+        run: python -c "import build; build.ensure_handbrake_cli('win')"
 
       - name: Build .exe
         run: |
