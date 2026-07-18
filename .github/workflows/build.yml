@@ -8,7 +8,14 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - runner: macos-13
+            arch: x86_64
+          - runner: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,13 +44,13 @@ jobs:
             -volname "VE2ZDX Downloader" \
             -srcfolder dist/_dmg_staging \
             -ov -format UDZO \
-            dist/VE2ZDXDownloader.dmg
+            "dist/VE2ZDXDownloader-${{ matrix.arch }}.dmg"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
-          name: VE2ZDXDownloader-mac
-          path: dist/VE2ZDXDownloader.dmg
+          name: VE2ZDXDownloader-mac-${{ matrix.arch }}
+          path: dist/VE2ZDXDownloader-${{ matrix.arch }}.dmg
 
   build-windows:
     runs-on: windows-latest
