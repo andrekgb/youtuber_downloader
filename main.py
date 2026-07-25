@@ -106,7 +106,7 @@ def slice_video_clips(video_path, ranges, save_path, handbrake_path, log_fn):
         log_fn(f"Cutting {callsign}: {start_sec}s -> {end_label}\n")
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            log_fn(f"HandBrakeCLI error for {callsign}: {result.stderr[-300:]}\n")
+            log_fn(f"HandBrakeCLI error for {callsign}: {result.stderr[-300:]}\n", error=True)
 
 
 def convert_to_mp4(video_path, handbrake_path, log_fn):
@@ -119,7 +119,7 @@ def convert_to_mp4(video_path, handbrake_path, log_fn):
     log_fn(f"Converting {os.path.basename(video_path)} to mp4...\n")
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        log_fn(f"HandBrakeCLI error converting to mp4: {result.stderr[-300:]}\n")
+        log_fn(f"HandBrakeCLI error converting to mp4: {result.stderr[-300:]}\n", error=True)
         return video_path
 
     os.remove(video_path)
@@ -150,11 +150,14 @@ class MyLogger:
         self._log(msg)
 
     def error(self, msg):
-        self._log(msg)
+        self._log(msg, error=True)
 
-    def _log(self, msg):
-        root.after(0, lambda: self.text_widget.insert(tk.END, msg + '\n'))
-        root.after(0, lambda: self.text_widget.see(tk.END))
+    def _log(self, msg, error=False):
+        tag = ('error',) if error else ()
+        def _insert():
+            self.text_widget.insert(tk.END, msg + '\n', tag)
+            self.text_widget.see(tk.END)
+        root.after(0, _insert)
 
 def download_video():
     url = url_entry.get()
@@ -180,9 +183,12 @@ def download_video():
 def download_thread_function(url, save_path):
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
-    def log(msg):
-        root.after(0, lambda m=msg: status_box.insert(tk.END, m))
-        root.after(0, lambda: status_box.see(tk.END))
+    def log(msg, error=False):
+        tag = ('error',) if error else ()
+        def _insert(m=msg):
+            status_box.insert(tk.END, m, tag)
+            status_box.see(tk.END)
+        root.after(0, _insert)
 
     ydl_opts = {
         'outtmpl': f'{save_path}/%(playlist_title)s/%(title)s.%(ext)s' if playlist_var.get() else f'{save_path}/%(title)s.%(ext)s',
@@ -196,6 +202,7 @@ def download_thread_function(url, save_path):
             'preferredquality': '192',
         }] if mp3_var.get() else [],
         'noplaylist': not playlist_var.get(),
+        'ignoreerrors': playlist_var.get(),
         'js_runtimes': {'node': {'path': NODE_PATH}} if NODE_PATH else {},
         'remote_components': {'ejs:github'},
     }
@@ -210,7 +217,7 @@ def download_thread_function(url, save_path):
             if not HANDBRAKE_PATH:
                 root.after(0, lambda: messagebox.showerror(
                     "Error", "HandBrakeCLI not found. It is required to cut the video into mp4 clips."))
-                log("Error: HandBrakeCLI not found.\n")
+                log("Error: HandBrakeCLI not found.\n", error=True)
                 return
 
             log("Fetching video description...\n")
@@ -221,14 +228,14 @@ def download_thread_function(url, save_path):
                 if 've2zdx.com' not in description.lower():
                     root.after(0, lambda: messagebox.showerror(
                         "Error", "ve2zdx.com not found in video description."))
-                    log("Error: ve2zdx.com not found in description.\n")
+                    log("Error: ve2zdx.com not found in description.\n", error=True)
                     return
 
                 entries = parse_timestamps_and_callsigns(description)
                 if not entries:
                     root.after(0, lambda: messagebox.showerror(
                         "Error", "No timestamps with amateur radio callsigns found in description."))
-                    log("Error: No valid timestamps/callsigns found in description.\n")
+                    log("Error: No valid timestamps/callsigns found in description.\n", error=True)
                     return
 
                 ranges = build_clip_ranges(entries)
@@ -239,7 +246,7 @@ def download_thread_function(url, save_path):
                     if not ranges:
                         root.after(0, lambda cs=my_callsign: messagebox.showerror(
                             "Error", f"No QSO found for callsign {cs} in the video description."))
-                        log(f"Error: No QSO found for callsign {my_callsign}.\n")
+                        log(f"Error: No QSO found for callsign {my_callsign}.\n", error=True)
                         return
 
                 log(f"Found {len(ranges)} QSOs. Downloading video...\n")
@@ -251,7 +258,7 @@ def download_thread_function(url, save_path):
 
             if not actual_file or not os.path.exists(actual_file):
                 root.after(0, lambda: messagebox.showerror("Error", "Could not find downloaded video file."))
-                log("Error: downloaded file not found on disk.\n")
+                log("Error: downloaded file not found on disk.\n", error=True)
                 return
 
             log(f"Slicing into {len(ranges)} clips...\n")
@@ -279,7 +286,7 @@ def download_thread_function(url, save_path):
 
     except Exception as e:
         error_str = str(e)
-        log(f"Error: {error_str}\n")
+        log(f"Error: {error_str}\n", error=True)
         root.after(0, lambda msg=error_str: messagebox.showerror("Error", f"Failed: {msg}"))
     finally:
         root.after(0, lambda: download_button.config(state=tk.NORMAL))
@@ -360,5 +367,6 @@ download_button.pack(pady=10)
 
 status_box = ScrolledText(frame, height=10, bg='black', fg='#00FF00')
 status_box.pack(pady=10, fill=tk.BOTH, expand=True)
+status_box.tag_config('error', foreground='#FF3333')
 
 root.mainloop()
