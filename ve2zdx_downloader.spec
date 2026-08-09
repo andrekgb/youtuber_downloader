@@ -73,7 +73,7 @@ if sys.platform == 'darwin':
         bundle_identifier='com.ve2zdx.downloader',
         info_plist={
             'NSHighResolutionCapable': True,
-            'CFBundleShortVersionString': '1.0.0',
+            'CFBundleShortVersionString': '1.0.1',
             'LSMinimumSystemVersion': '10.13.0',
         },
     )
