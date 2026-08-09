@@ -89,3 +89,25 @@ jobs:
         with:
           name: VE2ZDXDownloader-windows
           path: dist/VE2ZDXDownloaderSetup.exe
+
+  release:
+    # Artifacts expire and require a GitHub login to download; a release gives
+    # users a permanent public link to each installer.
+    needs: [build-mac, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          path: installers
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: installers/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
