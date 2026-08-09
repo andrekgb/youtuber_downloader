@@ -1,6 +1,6 @@
 [Setup]
 AppName=VE2ZDX Downloader
-AppVersion=1.0.1
+AppVersion=0.1.0
 AppPublisher=VE2ZDX
 AppPublisherURL=https://ve2zdx.com
 DefaultDirName={autopf}\VE2ZDX Downloader
