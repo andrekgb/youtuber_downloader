@@ -2,11 +2,13 @@
 This project is a simple youtube downloader that uses the yt-dlp library to download videos/audio from youtube.
  - https://github.com/yt-dlp/yt-dlp
 
+Recent yt-dlp versions need a JavaScript runtime to extract YouTube videos — without one, extraction falls back to clients that fail with `ERROR: [youtube] <id>: This video is not available`. A `qjs` binary (quickjs-ng, ~1-2 MB) is therefore bundled with the app; if `deno` or `node` (>= 22) is already installed on the machine, those are used first since they are faster.
+
 Video output is always normalized to `.mp4` via a bundled HandBrakeCLI (some YouTube video+audio combinations can only be merged by yt-dlp/ffmpeg into `.mkv`/`.webm`; HandBrakeCLI re-encodes those to `.mp4`). The same HandBrakeCLI is also used to cut clips for the "Slice video on timestamps" (Ham Radio) feature, producing `.mp4` clips directly instead of copying the source container.
 
 # Dependencies
  - pip install -r requirements.txt
- - HandBrakeCLI is fetched automatically by `build.py` (see below) into `vendor/handbrake/<mac|win>/` and bundled into the installer. For running `python main.py` directly in development, either run `python build.py` once to populate `vendor/`, or install HandBrakeCLI yourself and make sure it's on your `PATH`.
+ - HandBrakeCLI and `qjs` are fetched automatically by `build.py` (see below) into `vendor/handbrake/<mac|win>/` and `vendor/quickjs/<mac|win>/`, and bundled into the installer. For running `python main.py` directly in development, either run `python build.py` once to populate `vendor/`, or install HandBrakeCLI / a JavaScript runtime yourself and make sure they're on your `PATH`.
 
 # Creating Executables
 

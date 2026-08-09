@@ -14,6 +14,25 @@ import tempfile
 import urllib.request
 import zipfile
 
+QUICKJS_VERSION = "0.16.1"
+QUICKJS_BASE_URL = f"https://github.com/quickjs-ng/quickjs/releases/download/v{QUICKJS_VERSION}"
+# yt-dlp needs a JavaScript runtime to extract YouTube videos; quickjs-ng is the
+# smallest supported one (~1-2 MB), so it is bundled with the app.
+QUICKJS_ASSETS = {
+    ('mac', 'arm64'): {
+        'filename': 'qjs-darwin-arm64',
+        'sha256': '9a24e7435036906c098d539daf47bcc8e7e8ad2f3aa084a0bce9313c6c3527e0',
+    },
+    ('mac', 'x86_64'): {
+        'filename': 'qjs-darwin-x86_64',
+        'sha256': '5982a1ebb20e1a9bf6162bafd29d445823616084cfeddee8881f8d69d6e0fd74',
+    },
+    ('win', 'x86_64'): {
+        'filename': 'qjs-windows-x86_64.exe',
+        'sha256': '55a1b69cd4fdb6b0d3f8fdd910d0e89519f5330e408462084140c7b3b964fdae',
+    },
+}
+
 HANDBRAKE_VERSION = "1.11.2"
 HANDBRAKE_BASE_URL = f"https://github.com/HandBrake/HandBrake/releases/download/{HANDBRAKE_VERSION}"
 HANDBRAKE_ASSETS = {
@@ -101,10 +120,55 @@ def ensure_handbrake_cli(target):
     return dest_path
 
 
+def _host_arch():
+    machine = platform.machine().lower()
+    if machine in ('arm64', 'aarch64'):
+        return 'arm64'
+    return 'x86_64'
+
+
+def ensure_quickjs(target, arch=None):
+    """Download the qjs JavaScript runtime into vendor/quickjs/<target>/ if not already present."""
+    arch = arch or _host_arch()
+    asset = QUICKJS_ASSETS.get((target, arch))
+    if not asset:
+        sys.exit(f"ERROR: no quickjs build available for {target}/{arch}")
+
+    exe_name = 'qjs.exe' if target == 'win' else 'qjs'
+    dest_dir = os.path.join('vendor', 'quickjs', target)
+    dest_path = os.path.join(dest_dir, exe_name)
+
+    if os.path.isfile(dest_path):
+        print(f"qjs already present at {dest_path}")
+        return dest_path
+
+    os.makedirs(dest_dir, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        download_path = os.path.join(tmp_dir, asset['filename'])
+        _download(f"{QUICKJS_BASE_URL}/{asset['filename']}", download_path)
+
+        digest = _sha256(download_path)
+        if digest != asset['sha256']:
+            sys.exit(
+                f"ERROR: qjs checksum mismatch for {asset['filename']}\n"
+                f"  expected: {asset['sha256']}\n"
+                f"  got:      {digest}"
+            )
+        print("Checksum OK.")
+
+        shutil.copy(download_path, dest_path)
+
+    os.chmod(dest_path, 0o755)
+    print(f"qjs ready at {dest_path}")
+    return dest_path
+
+
 def build_mac():
     print("\n=== macOS build ===")
     clean()
     ensure_handbrake_cli('mac')
+    ensure_quickjs('mac')
     pyinstaller()
 
     app_src = 'dist/VE2ZDX Downloader.app'
@@ -141,6 +205,7 @@ def build_windows():
     print("\n=== Windows build ===")
     clean()
     ensure_handbrake_cli('win')
+    ensure_quickjs('win')
     pyinstaller()
 
     app_dir = os.path.join('dist', 'VE2ZDXDownloader')

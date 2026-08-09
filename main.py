@@ -24,26 +24,53 @@ def _find_node():
                 return candidate
     return None
 
-def _find_handbrake():
-    exe_name = "HandBrakeCLI.exe" if sys.platform.startswith("win") else "HandBrakeCLI"
-
+def _find_bundled_tool(exe_name, vendor_name):
     # PyInstaller bundle: binary is placed next to the app in _MEIPASS
     bundled = os.path.join(getattr(sys, "_MEIPASS", ""), exe_name)
     if os.path.isfile(bundled):
         return bundled
 
-    # Dev environment: binary downloaded by build.py into vendor/handbrake/<platform>/
+    # Dev environment: binary downloaded by build.py into vendor/<vendor_name>/<platform>/
     vendor_dir = "win" if sys.platform.startswith("win") else "mac"
     vendor_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "vendor", "handbrake", vendor_dir, exe_name
+        os.path.dirname(os.path.abspath(__file__)), "vendor", vendor_name, vendor_dir, exe_name
     )
     if os.path.isfile(vendor_path):
         return vendor_path
 
-    return shutil.which("HandBrakeCLI")
+    return shutil.which(os.path.splitext(exe_name)[0])
+
+def _find_handbrake():
+    exe_name = "HandBrakeCLI.exe" if sys.platform.startswith("win") else "HandBrakeCLI"
+    return _find_bundled_tool(exe_name, "handbrake")
+
+def _find_quickjs():
+    exe_name = "qjs.exe" if sys.platform.startswith("win") else "qjs"
+    return _find_bundled_tool(exe_name, "quickjs")
+
+def _find_js_runtimes():
+    """yt-dlp requires a JavaScript runtime to extract YouTube videos; without one it
+    falls back to clients that fail with "This video is not available". Prefer a runtime
+    already installed on the machine, and fall back to the qjs binary we ship."""
+    runtimes = {}
+
+    deno = shutil.which("deno")
+    if deno:
+        runtimes['deno'] = {'path': deno}
+
+    node = _find_node()
+    if node:
+        runtimes['node'] = {'path': node}
+
+    qjs = _find_quickjs()
+    if qjs:
+        runtimes['quickjs'] = {'path': qjs}
+
+    return runtimes
 
 NODE_PATH = _find_node()
 HANDBRAKE_PATH = _find_handbrake()
+JS_RUNTIMES = _find_js_runtimes()
 
 def parse_timestamp_to_seconds(ts_str):
     parts = ts_str.strip().split(':')
@@ -203,11 +230,15 @@ def download_thread_function(url, save_path):
         }] if mp3_var.get() else [],
         'noplaylist': not playlist_var.get(),
         'ignoreerrors': playlist_var.get(),
-        'js_runtimes': {'node': {'path': NODE_PATH}} if NODE_PATH else {},
+        'js_runtimes': JS_RUNTIMES,
         'remote_components': {'ejs:github'},
     }
 
     log("Download process started...\n")
+
+    if not JS_RUNTIMES:
+        log("Warning: no JavaScript runtime found (deno/node/qjs) - YouTube downloads will "
+            "likely fail with \"This video is not available\".\n", error=True)
 
     if not mp3_var.get() and not HANDBRAKE_PATH:
         log("Warning: HandBrakeCLI not found - output may not be converted to mp4.\n")

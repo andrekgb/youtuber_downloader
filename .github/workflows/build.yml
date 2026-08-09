@@ -31,6 +31,9 @@ jobs:
       - name: Fetch HandBrakeCLI
         run: python -c "import build; build.ensure_handbrake_cli('mac')"
 
+      - name: Fetch QuickJS (JavaScript runtime for yt-dlp)
+        run: python -c "import build; build.ensure_quickjs('mac', '${{ matrix.arch }}')"
+
       - name: Build .app and .dmg
         run: |
           pyinstaller ve2zdx_downloader.spec --clean --noconfirm
@@ -68,6 +71,9 @@ jobs:
 
       - name: Fetch HandBrakeCLI
         run: python -c "import build; build.ensure_handbrake_cli('win')"
+
+      - name: Fetch QuickJS (JavaScript runtime for yt-dlp)
+        run: python -c "import build; build.ensure_quickjs('win', 'x86_64')"
 
       - name: Build .exe
         run: |

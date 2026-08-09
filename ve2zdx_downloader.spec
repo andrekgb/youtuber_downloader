@@ -8,18 +8,25 @@ yt_dlp_datas, yt_dlp_binaries, yt_dlp_hiddenimports = collect_all('yt_dlp')
 
 if sys.platform == 'darwin':
     handbrake_src = os.path.join('vendor', 'handbrake', 'mac', 'HandBrakeCLI')
+    quickjs_src = os.path.join('vendor', 'quickjs', 'mac', 'qjs')
 else:
     handbrake_src = os.path.join('vendor', 'handbrake', 'win', 'HandBrakeCLI.exe')
+    quickjs_src = os.path.join('vendor', 'quickjs', 'win', 'qjs.exe')
 
 handbrake_binaries = [(handbrake_src, '.')] if os.path.isfile(handbrake_src) else []
 if not handbrake_binaries:
     print(f"WARNING: HandBrakeCLI not found at {handbrake_src} - run build.py to fetch it. "
           f"The packaged app will not be able to produce mp4 output.")
 
+quickjs_binaries = [(quickjs_src, '.')] if os.path.isfile(quickjs_src) else []
+if not quickjs_binaries:
+    print(f"WARNING: qjs not found at {quickjs_src} - run build.py to fetch it. "
+          f"Without a JavaScript runtime yt-dlp cannot extract YouTube videos.")
+
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=yt_dlp_binaries + collect_dynamic_libs('PIL') + handbrake_binaries,
+    binaries=yt_dlp_binaries + collect_dynamic_libs('PIL') + handbrake_binaries + quickjs_binaries,
     datas=[
         ('ve2zdx_logo.png', '.'),
         *collect_data_files('imageio_ffmpeg'),
