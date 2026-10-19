@@ -52,5 +52,5 @@ websockets==13.1; python_version >= "3.8"
 websockets==10.4; python_version < "3.8"
 
 # yt-dlp
-yt-dlp==2026.06.09; python_version >= "3.8"
+yt-dlp==2026.8.19; python_version >= "3.8"
 yt-dlp==2023.03.04; python_version < "3.8"
